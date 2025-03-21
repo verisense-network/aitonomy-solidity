@@ -26,6 +26,13 @@ contract AgentDelegator is
         address tokenAddress;
     }
 
+    event WithdrawEvent(
+        address user,
+        uint256 amt,
+        uint256 seq
+    );
+
+
     function _authorizeUpgrade(
         address newImplementation
     ) internal override onlyOwner {}
@@ -54,10 +61,12 @@ contract AgentDelegator is
             _messageBytes,
             (uint256, address, uint256)
         );
+        require(destination == _msgSender(), "permission deny");
         require(!tickets[sequence], "the reward had been withdrawed");
         require(verifySignature(_messageBytes, _signature), "signature validate failed");
         TokenContract(tokenAddress).transfer(destination, amt);
         tickets[sequence] = true;
+        emit WithdrawEvent(_msgSender(), amt, sequence);
     }
 
     using Strings for uint256;
