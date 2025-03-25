@@ -3,51 +3,39 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./TokenContract.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 
-contract AgentDelegator is
-    Initializable,
-    UUPSUpgradeable,
-    OwnableUpgradeable {
+contract AgentDelegator is Ownable {
 
     address public tokenAddress;
     mapping(uint256 => bool) public tickets;
-
-    struct TokenInfo {
-        string name;
-        string symbol;
-        uint8 decimals;
-        uint256 totalSupply;
-        bool newIssue;
-        address tokenAddress;
-    }
-
     event WithdrawEvent(
         address user,
         uint256 amt,
         uint256 seq
     );
 
-
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyOwner {}
-
-    function initialize(TokenInfo calldata info) public initializer {
-        if (info.newIssue) {
-            require(info.decimals > 0 && info.decimals <19, "decimals must between 1 and 18");
-            require(info.totalSupply > 0, "total supply error");
-            tokenAddress = address(new TokenContract(info.name, info.symbol, info.decimals, info.totalSupply));
+    event TokenAdded(address a);
+    constructor(string memory name,
+                        string memory symbol,
+                        uint8 decimals,
+                        uint256 totalSupply,
+                        bool newIssue,
+                        address _tokenAddress) Ownable(_msgSender()) {
+        if (newIssue) {
+            require(decimals > 0 && decimals <19, "decimals must between 1 and 18");
+            require(totalSupply > 0, "total supply error");
+            tokenAddress = address(new TokenContract(name, symbol, decimals, totalSupply));
+            emit TokenAdded(tokenAddress);
         }else {
-            require(info.tokenAddress != address(0), "token addr error");
-            tokenAddress = info.tokenAddress;
+            ERC20 ct = ERC20(_tokenAddress);
+            require(ct.decimals() == decimals, "deceimals error");
+            require(keccak256(bytes(ct.name())) == keccak256(bytes(name)), "name error");
+            require(keccak256(bytes(ct.symbol())) == keccak256(bytes(symbol)), "symbol error");
+            tokenAddress = _tokenAddress;
         }
-        __Ownable_init(msg.sender);
-        __UUPSUpgradeable_init();
     }
 
     function transfer(address to, uint256 amt) external onlyOwner {
