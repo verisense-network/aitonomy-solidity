@@ -11,12 +11,18 @@ contract AgentDelegator is Ownable {
 
     address public tokenAddress;
     mapping(uint256 => bool) public tickets;
+    mapping(address => uint256[]) public user_tickets;
+    mapping(address => uint256) public user_max_withdrawed;
     event WithdrawEvent(
         address user,
         uint256 amt,
         uint256 seq
     );
 
+    struct Reward {
+        bytes  _messageBytes;
+        bytes  _signature;
+    }
     event TokenAdded(address a);
     constructor(string memory name,
                         string memory symbol,
@@ -45,16 +51,30 @@ contract AgentDelegator is Ownable {
     }
 
     function withdraw(bytes memory _messageBytes, bytes memory _signature) external {
+        _withdraw(_messageBytes, _signature);
+    }
+
+    function _withdraw(bytes memory _messageBytes, bytes memory _signature) internal {
         (uint256 sequence, address destination, uint256 amt) = abi.decode(
             _messageBytes,
             (uint256, address, uint256)
         );
         require(destination == _msgSender(), "permission deny");
-        require(!tickets[sequence], "the reward had been withdrawed");
+        require(!tickets[sequence], "the reward had been withdrawn");
         require(verifySignature(_messageBytes, _signature), "signature validate failed");
         TokenContract(tokenAddress).transfer(destination, amt);
         tickets[sequence] = true;
+        user_tickets[destination].push(sequence);
+        if (user_max_withdrawed[destination] < sequence) {
+            user_max_withdrawed[destination] = sequence;
+        }
         emit WithdrawEvent(_msgSender(), amt, sequence);
+    }
+
+    function batch_withdraw(Reward[] memory rewards) external {
+        for (uint256 i = 0; i < rewards.length; i++) {
+            _withdraw(rewards[i]._messageBytes, rewards[i]._messageBytes);
+        }
     }
 
     using Strings for uint256;
