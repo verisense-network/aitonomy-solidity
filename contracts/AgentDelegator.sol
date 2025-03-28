@@ -11,7 +11,7 @@ contract AgentDelegator is Ownable {
 
     address public tokenAddress;
     mapping(uint256 => bool) public tickets;
-    mapping(address => uint256[]) public user_tickets;
+    mapping(address => uint256[]) private user_tickets;
     mapping(address => uint256) public user_max_withdrawed;
     event WithdrawEvent(
         address user,
@@ -19,10 +19,12 @@ contract AgentDelegator is Ownable {
         uint256 seq
     );
 
+
     struct Reward {
         bytes  _messageBytes;
         bytes  _signature;
     }
+
     event TokenAdded(address a);
     constructor(string memory name,
                         string memory symbol,
@@ -52,6 +54,10 @@ contract AgentDelegator is Ownable {
 
     function withdraw(bytes memory _messageBytes, bytes memory _signature) external {
         _withdraw(_messageBytes, _signature);
+    }
+
+    function user_withdraws(address user) public view returns(uint256[] memory) {
+        return user_tickets[user];
     }
 
     function _withdraw(bytes memory _messageBytes, bytes memory _signature) internal {
