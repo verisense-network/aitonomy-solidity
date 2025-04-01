@@ -12,6 +12,7 @@ contract AgentDelegator is Ownable {
     address public tokenAddress;
     mapping(uint256 => bool) public tickets;
     mapping(address => uint256[]) private user_tickets;
+    mapping(address => uint256) public user_tickets_length;
     mapping(address => uint256) public user_max_withdrawed;
     event WithdrawEvent(
         address user,
@@ -57,7 +58,15 @@ contract AgentDelegator is Ownable {
     }
 
     function user_withdraws(address user) public view returns(uint256[] memory) {
-        return user_tickets[user];
+        uint256 l = user_tickets_length[user];
+        if (l == 0 ) {
+            return new uint256[](0);
+        }
+        uint256[] memory seqs = new uint256[](l);
+        for (uint256 i = 0; i < l; i++) {
+            seqs[i] = user_tickets[user][i];
+        }
+        return seqs;
     }
 
     function _withdraw(bytes memory _messageBytes, bytes memory _signature) internal {
@@ -71,6 +80,8 @@ contract AgentDelegator is Ownable {
         TokenContract(tokenAddress).transfer(destination, amt);
         tickets[sequence] = true;
         user_tickets[destination].push(sequence);
+        uint256 l = user_tickets_length[destination];
+        user_tickets_length[destination] = l+1;
         if (user_max_withdrawed[destination] < sequence) {
             user_max_withdrawed[destination] = sequence;
         }
