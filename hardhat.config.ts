@@ -3,12 +3,11 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ignition-ethers";
 import "@openzeppelin/hardhat-upgrades";
 
-import { vars } from "hardhat/config";
-const DEPLOY_PRI_KEY = vars.get("DEPLOY_PRI_KEY");
+const { mnemonic, bscscanApiKey } = require('./secrets.json');
 const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.24",
-    settings:{
+    settings: {
       optimizer: {
         enabled: true,
         runs: 200
@@ -16,11 +15,19 @@ const config: HardhatUserConfig = {
     }
   },
   networks: {
-    ethereum: {
-      url:`https://base.llamarpc.com`,
-      accounts: [DEPLOY_PRI_KEY],
+    bsc: {
+      url: `https://bsc-dataseed.binance.org/`,
+      accounts: { mnemonic: mnemonic }
     }
-  }
+  },
+  sourcify: {
+    enabled: true
+  },
+  etherscan: {
+    // Your API key for Etherscan
+    // Obtain one at https://bscscan.com/
+    apiKey: bscscanApiKey
+  },
 };
 
 export default config;
