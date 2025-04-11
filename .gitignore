@@ -64,3 +64,5 @@ target/
 
 typechain-types/
 ignition/deployments
+
+secrets.json
