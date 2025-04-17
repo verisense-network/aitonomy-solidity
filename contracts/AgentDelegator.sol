@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./TokenContract.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-
-contract AgentDelegator is Ownable {
+contract AgentDelegator is Ownable, ReentrancyGuard {
 
     address public tokenAddress;
     mapping(uint256 => bool) public tickets;
@@ -69,15 +69,14 @@ contract AgentDelegator is Ownable {
         return seqs;
     }
 
-    function _withdraw(bytes memory _messageBytes, bytes memory _signature) internal {
+    function _withdraw(bytes memory _messageBytes, bytes memory _signature) internal nonReentrant {
+        require(verifySignature(_messageBytes, _signature), "signature validate failed");
         (uint256 sequence, address destination, uint256 amt) = abi.decode(
             _messageBytes,
             (uint256, address, uint256)
         );
         require(destination == _msgSender(), "permission deny");
         require(!tickets[sequence], "the reward had been withdrawn");
-        require(verifySignature(_messageBytes, _signature), "signature validate failed");
-        TokenContract(tokenAddress).transfer(destination, amt);
         tickets[sequence] = true;
         user_tickets[destination].push(sequence);
         uint256 l = user_tickets_length[destination];
@@ -85,12 +84,14 @@ contract AgentDelegator is Ownable {
         if (user_max_withdrawed[destination] < sequence) {
             user_max_withdrawed[destination] = sequence;
         }
+        TokenContract(tokenAddress).transfer(destination, amt);
         emit WithdrawEvent(_msgSender(), amt, sequence);
     }
 
     function batch_withdraw(Reward[] memory rewards) external {
+        require(rewards.length > 0, "No rewards provided");
         for (uint256 i = 0; i < rewards.length; i++) {
-            _withdraw(rewards[i]._messageBytes, rewards[i]._messageBytes);
+            _withdraw(rewards[i]._messageBytes, rewards[i]._signature);
         }
     }
 
