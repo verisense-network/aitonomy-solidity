@@ -8,18 +8,18 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract AgentDelegator is Ownable, ReentrancyGuard {
+    using Strings for uint256;
 
     address public tokenAddress;
     mapping(uint256 => bool) public tickets;
     mapping(address => uint256[]) private user_tickets;
-    mapping(address => uint256) public user_tickets_length;
     mapping(address => uint256) public user_max_withdrawed;
+
     event WithdrawEvent(
         address user,
         uint256 amt,
         uint256 seq
     );
-
 
     struct Reward {
         bytes  _messageBytes;
@@ -27,6 +27,7 @@ contract AgentDelegator is Ownable, ReentrancyGuard {
     }
 
     event TokenAdded(address a);
+
     constructor(string memory name,
                         string memory symbol,
                         uint8 decimals,
@@ -58,7 +59,7 @@ contract AgentDelegator is Ownable, ReentrancyGuard {
     }
 
     function user_withdraws(address user) public view returns(uint256[] memory) {
-        uint256 l = user_tickets_length[user];
+        uint256 l = user_tickets[user].length;
         if (l == 0 ) {
             return new uint256[](0);
         }
@@ -79,8 +80,6 @@ contract AgentDelegator is Ownable, ReentrancyGuard {
         require(!tickets[sequence], "the reward had been withdrawn");
         tickets[sequence] = true;
         user_tickets[destination].push(sequence);
-        uint256 l = user_tickets_length[destination];
-        user_tickets_length[destination] = l+1;
         if (user_max_withdrawed[destination] < sequence) {
             user_max_withdrawed[destination] = sequence;
         }
@@ -95,7 +94,6 @@ contract AgentDelegator is Ownable, ReentrancyGuard {
         }
     }
 
-    using Strings for uint256;
     function verifySignature(
         bytes memory _messageBytes,
         bytes memory _signature
